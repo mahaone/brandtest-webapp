@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Генератор Опросников (Модульная архитектура)</title>
+    <style>
+        /* --- СТИЛИ КОНСТРУКТОРА --- */
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f3f4f6;
+            --card-bg: #ffffff;
+            --border: #e5e7eb;
+            --text: #111827;
+            --text-light: #6b7280;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+
+        body { background-color: var(--bg); color: var(--text); padding: 20px; line-height: 1.5; }
+        .container { max-width: 720px; margin: 0 auto; }
+        h1, h2, h3 { margin-bottom: 15px; }
+        .hidden { display: none !important; }
+
+        .card { background-color: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .section-card { border-left: 4px solid var(--primary); }
+        .nested-card { background-color: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 15px; }
+
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 0.9rem; }
+        
+        input[type="text"], input[type="number"] { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 1rem; }
+        input[type="checkbox"] { cursor: pointer; accent-color: var(--primary); width: 16px; height: 16px; vertical-align: middle; }
+        .checkbox-label { display: inline-flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer; }
+        
+        input:focus { outline: none; border-color: var(--primary); }
+
+        .flex { display: flex; gap: 10px; align-items: center; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+        .mb-10 { margin-bottom: 10px; }
+        .mb-20 { margin-bottom: 20px; }
+        .mt-10 { margin-top: 10px; }
+        .mt-20 { margin-top: 20px; }
+
+        /* Кнопки */
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; font-size: 0.9rem; }
+        .btn-primary { background-color: var(--primary); color: white; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-success { background-color: var(--success); color: white; }
+        .btn-success:hover { background-color: #059669; }
+        .btn-outline { background-color: transparent; border: 1px solid var(--border); }
+        .btn-outline:hover { background-color: var(--bg); }
+        .btn-danger { background-color: var(--danger); color: white; }
+        .btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        /* WYSIWYG Редактор */
+        .editor-toolbar { display: flex; flex-wrap: wrap; gap: 5px; padding: 5px; background: #f8f9fa; border: 1px solid var(--border); border-bottom: none; border-radius: 6px 6px 0 0; }
+        .editor-btn { background: white; border: 1px solid var(--border); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
+        .editor-btn:hover { background: #e5e7eb; }
+        .editor-content { border: 1px solid var(--border); border-radius: 0 0 6px 6px; padding: 10px; min-height: 40px; background: white; outline: none; }
+        .editor-content[data-placeholder]:empty:before { content: attr(data-placeholder); color: var(--text-light); pointer-events: none; }
+        ul, ol { margin-left: 20px; }
+
+        /* Футер */
+        .form-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 30px; margin-bottom: 50px; }
+        .form-actions .btn { font-size: 1rem; padding: 12px 24px; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="builder-container">
+    <h1>Создание опроса</h1>
+
+    <div id="builder-form">
+        <div id="sections-container"></div>
+        <button class="btn btn-outline mb-20" onclick="addSection()">+ Добавить раздел</button>
+    </div>
+
+    <div class="form-actions">
+        <button class="btn btn-outline" style="color: var(--danger); border-color: var(--danger);" onclick="clearFormConfirm()">Очистить форму</button>
+        <button class="btn btn-success" onclick="downloadJS()">1. Скачать данные (questions.js)</button>
+        <button class="btn btn-primary" onclick="downloadHTML()">2. Скачать опросник (HTML)</button>
+    </div>
+</div>
+
+<script>
+    // --- ЛОГИКА КОНСТРУКТОРА ---
+    const generateId = () => 'id_' + Math.random().toString(36).substr(2, 9);
+
+    function execCmd(command, value = null) {
+        document.execCommand(command, false, value);
+    }
+
+    function insertLink() {
+        const url = prompt("Введите URL ссылки:", "https://");
+        if (url) execCmd('createLink', url);
+    }
+
+    function getBasicWysiwygHTML(id, placeholder) {
+        return `
+            <div class="editor-toolbar">
+                <button type="button" class="editor-btn" onmousedown="event.preventDefault(); execCmd('bold')"><b>Ж</b></button>
+                <button type="button" class="editor-btn" onmousedown="event.preventDefault(); execCmd('italic')"><i>К</i></button>
+                <button type="button" class="editor-btn" onmousedown="event.preventDefault(); execCmd('underline')"><u>Ч</u></button>
+            </div>
+            <div id="${id}" class="editor-content req-html" contenteditable="true" data-placeholder="${placeholder}"></div>
+        `;
+    }
+
+    function getExtendedWysiwygHTML(id, placeholder) {
+        return `
+            <div class="editor-toolbar">
+                <button type="button" class="editor-btn" onmousedown="event.preventDefault(); execCmd('bold')"><b>Ж</b></button>
+                <button type="button" class="editor-btn" onmousedown="event.preventDefault(); execCmd('italic')"><i>К</i></button>
+                <button type="button" class="editor-btn" onmousedown="event.preventDefault(); execCmd('underline')"><u>Ч</u></button>
+                <button type="button" class="editor-btn" onmousedown="event.preventDefault(); execCmd('insertUnorderedList')">• Список</button>
+                <button type="button" class="editor-btn" onmousedown="event.preventDefault(); insertLink()">🔗 Ссылка</button>
+            </div>
+            <div id="${id}" class="editor-content req-html" contenteditable="true" data-placeholder="${placeholder}"></div>
+        `;
+    }
+
+    // Надежная инициализация после загрузки DOM
+    document.addEventListener('DOMContentLoaded', () => {
+        initDefaultState();
+    });
+
+    function initDefaultState() {
+        console.log('Builder initialized');
+        const container = document.getElementById('sections-container');
+        if (container) {
+            container.innerHTML = '';
+            addSection();
+        } else {
+            console.error("Критическая ошибка: Контейнер #sections-container не найден.");
+        }
+    }
+
+    function addSection() {
+        const container = document.getElementById('sections-container');
+        if (!container) return;
+
+        const secId = generateId();
+        const html = `
+            <div class="card section-card" id="${secId}">
+                <div class="flex-between form-group">
+                    <input type="text" class="sec-title" placeholder="Заголовок раздела (обязательно)" style="font-size: 1.2rem; font-weight: bold; border-width: 0 0 2px 0; border-radius: 0;">
+                    <button class="btn btn-danger" onclick="document.getElementById('${secId}').remove()">Удалить раздел</button>
+                </div>
+                
+                <div class="form-group">
+                    <label>Описание раздела (опционально):</label>
+                    ${getExtendedWysiwygHTML(`sdesc_${secId}`, "Введите описание раздела...")}
+                </div>
+
+                <div class="form-group mt-20">
+                    <label>Вопросы:</label>
+                    <div class="questions-container" id="q-container-${secId}"></div>
+                    <button class="btn btn-outline mt-10" onclick="addQuestion('${secId}')">+ Добавить вопрос</button>
+                </div>
+
+                <div class="form-group mt-20" style="border-top: 1px dashed var(--border); padding-top: 15px;">
+                    <label>Диапазоны результатов раздела:</label>
+                    <p style="font-size: 0.85rem; color: var(--text-light); margin-bottom: 10px;">Мин. 2 диапазона. Должны покрывать все вопросы без пересечений.</p>
+                    <div class="ranges-container" id="r-container-${secId}"></div>
+                    <button class="btn btn-outline mt-10" onclick="addRange('${secId}')">+ Добавить диапазон</button>
+                </div>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', html);
+        addQuestion(secId);
+        addRange(secId);
+        addRange(secId);
+    }
+
+    function addQuestion(secId) {
+        const qContainer = document.getElementById(`q-container-${secId}`);
+        if (!qContainer) return;
+
+        const qId = generateId();
+        const html = `
+            <div class="nested-card question-item" id="${qId}">
+                <div class="flex-between mb-10">
+                    <strong>Вопрос</strong>
+                    <button class="btn btn-danger" style="padding: 4px 8px;" onclick="document.getElementById('${qId}').remove()">✕</button>
+                </div>
+                <div class="form-group">
+                    <label>Текст вопроса (обязательно)</label>
+                    ${getBasicWysiwygHTML(`qtext_${qId}`, "Введите вопрос...")}
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" onchange="toggleNoteWrapper('${qId}')"> Добавить примечание
+                    </label>
+                </div>
+                <div class="form-group hidden" id="note-wrapper-${qId}">
+                    <label>Примечание</label>
+                    ${getBasicWysiwygHTML(`qnote_${qId}`, "Введите примечание...")}
+                </div>
+            </div>
+        `;
+        qContainer.insertAdjacentHTML('beforeend', html);
+    }
+
+    function toggleNoteWrapper(qId) {
+        const wrapper = document.getElementById(`note-wrapper-${qId}`);
+        if(wrapper) wrapper.classList.toggle('hidden');
+    }
+
+    function addRange(secId) {
+        const rContainer = document.getElementById(`r-container-${secId}`);
+        if (!rContainer) return;
+
+        const rId = generateId();
+        const html = `
+            <div class="nested-card range-item" id="${rId}">
+                <div class="flex mb-10">
+                    От: <input type="number" class="r-min" min="0" value="0" style="width: 70px;">
+                    До: <input type="number" class="r-max" min="0" value="0" style="width: 70px;">
+                    <button class="btn btn-danger btn-del-range" style="margin-left: auto;" onclick="removeRange('${secId}', '${rId}')">✕</button>
+                </div>
+                <div class="form-group">
+                    <label>Текст результата (выводится в конце):</label>
+                    ${getExtendedWysiwygHTML(`rtext_${rId}`, "Введите текст результата...")}
+                </div>
+            </div>
+        `;
+        rContainer.insertAdjacentHTML('beforeend', html);
+        updateDelButtons(`#r-container-${secId}`, '.range-item', '.btn-del-range');
+    }
+
+    function removeRange(secId, rId) {
+        const rElem = document.getElementById(rId);
+        if(rElem) rElem.remove();
+        updateDelButtons(`#r-container-${secId}`, '.range-item', '.btn-del-range');
+    }
+
+    function updateDelButtons(containerSel, itemSel, btnSel) {
+        const items = document.querySelectorAll(`${containerSel} ${itemSel}`);
+        const btns = document.querySelectorAll(`${containerSel} ${btnSel}`);
+        btns.forEach(btn => btn.disabled = items.length <= 2);
+    }
+
+    function clearFormConfirm() {
+        if(confirm("Вы уверены, что хотите полностью очистить форму?")) initDefaultState();
+    }
+
+    function validateRanges(ranges, maxQ) {
+        if (ranges.some(r => isNaN(r.min) || isNaN(r.max) || r.min > r.max)) return false;
+        const sorted = [...ranges].sort((a, b) => a.min - b.min);
+        if (sorted[0].min !== 0) return false;
+        if (sorted[sorted.length - 1].max !== maxQ) return false;
+        for (let i = 0; i < sorted.length - 1; i++) {
+            if (sorted[i].max + 1 !== sorted[i + 1].min) return false;
+        }
+        return true;
+    }
+
+    function gatherState() {
+        let valid = true;
+        let errorMsg = '';
+        const state = { sections: [] };
+
+        const sectionsNodes = document.querySelectorAll('.section-card');
+        if (sectionsNodes.length === 0) { alert('Добавьте хотя бы один раздел'); return null; }
+
+        sectionsNodes.forEach((sec, sIdx) => {
+            const title = sec.querySelector('.sec-title').value.trim();
+            if (!title) { valid = false; errorMsg = `Раздел ${sIdx+1}: Заголовок обязателен.`; return; }
+
+            const descHtml = sec.querySelector('.editor-content').innerHTML.trim();
+
+            const qNodes = sec.querySelectorAll('.question-item');
+            if (qNodes.length === 0) { valid = false; errorMsg = `Раздел "${title}": Нужен хотя бы 1 вопрос.`; return; }
+
+            const questions = [];
+            qNodes.forEach(q => {
+                const editors = q.querySelectorAll('.editor-content');
+                const textHTML = editors[0].innerHTML.trim();
+                const textRaw = editors[0].innerText.trim();
+                
+                const noteWrapper = q.querySelector('.hidden');
+                const noteHTML = noteWrapper ? "" : editors[1].innerHTML.trim();
+                
+                if (!textRaw) { valid = false; errorMsg = `Раздел "${title}": Текст вопроса обязателен.`; return; }
+                questions.push({ id: generateId(), text: textHTML, note: noteHTML });
+            });
+
+            const ranges = [];
+            sec.querySelectorAll('.range-item').forEach(r => {
+                const rangeTextHTML = r.querySelector('.editor-content').innerHTML.trim();
+                ranges.push({
+                    min: parseInt(r.querySelector('.r-min').value),
+                    max: parseInt(r.querySelector('.r-max').value),
+                    text: rangeTextHTML
+                });
+            });
+
+            if (valid && !validateRanges(ranges, questions.length)) {
+                valid = false; errorMsg = `Раздел "${title}": Диапазоны должны покрывать от 0 до ${questions.length} без пробелов и пересечений.`;
+            }
+
+            state.sections.push({ title, description: descHtml, questions, ranges });
+        });
+
+        if (!valid) { alert(errorMsg); return null; }
+        return state;
+    }
+
+    // Экспорт внешнего файла данных JS
+    function downloadJS() {
+        const state = gatherState();
+        if (!state) return;
+
+        // Формируем чистый JS код
+        const jsContent = "const surveyData = " + JSON.stringify(state, null, 2) + ";";
+        
+        const blob = new Blob([jsContent], { type: 'text/javascript' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'questions.js';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    // Экспорт чистого HTML Шаблона (без вшитых данных)
+    function downloadHTML() {
+        const state = gatherState();
+        if (!state) return;
+
+        const htmlTemplate = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Опросник</title>
+    <style>
+        /* ДИЗАЙН КВИЗА */
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --bg: #f9fafb;
+            --card-bg: #ffffff;
+            --border: #e5e7eb;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --radius-card: 16px;
+            --radius-btn: 24px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: var(--bg); color: var(--text-main); padding: 20px 10px; line-height: 1.5; }
+        .container { max-width: 720px; margin: 0 auto; }
+        
+        .header { margin-bottom: 20px; }
+        .quiz-title { font-size: 2.2rem; font-weight: 800; margin-bottom: 20px; letter-spacing: -0.02em; }
+        .step-info { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 15px; }
+        .progress-labels { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px; }
+        .progress-track { width: 100%; height: 8px; background-color: var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 30px; }
+        .progress-fill { height: 100%; background-color: var(--primary); transition: width 0.3s ease; }
+
+        .card { background-color: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 30px 20px; margin-bottom: 30px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        .section-title { color: var(--primary); font-size: 1.1rem; font-weight: 600; background: #eff6ff; display: inline-block; padding: 6px 14px; border-radius: 12px; margin-bottom: 15px; }
+        
+        .section-description, .result-sec-text { font-size: 1rem; color: var(--text-main); margin-bottom: 25px; line-height: 1.6; }
+        .section-description ul, .result-sec-text ul { margin-left: 20px; margin-top: 10px; margin-bottom: 10px; }
+        .section-description a, .result-sec-text a { color: var(--primary); text-decoration: none; }
+        .section-description a:hover, .result-sec-text a:hover { text-decoration: underline; }
+
+        .question-block { margin-bottom: 30px; }
+        .q-text { font-size: 1.25rem; font-weight: 700; margin-bottom: 8px; }
+        .q-note { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 15px; }
+        
+        .custom-checkbox-label { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border: 2px solid var(--border); border-radius: 12px; cursor: pointer; transition: all 0.2s ease; font-weight: 600; font-size: 1.1rem; }
+        .custom-checkbox-label:hover { border-color: #cbd5e1; background-color: #f8fafc; }
+        .custom-checkbox-label input { width: 24px; height: 24px; cursor: pointer; accent-color: var(--primary); }
+        .custom-checkbox-label.checked { border-color: var(--primary); background-color: #eff6ff; }
+
+        .btn-next, .btn-print { width: 100%; color: white; border: none; padding: 18px; border-radius: var(--radius-btn); font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s; }
+        .btn-next { background-color: var(--primary); box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39); }
+        .btn-next:hover { background-color: var(--primary-hover); }
+        .btn-print { background-color: #10b981; margin-top: 15px; box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.39); }
+        .btn-print:hover { background-color: #059669; }
+
+        /* Новые стили для результатов */
+        .result-section-box { border: 1px solid var(--border); border-left: 4px solid var(--primary); padding: 20px; margin-bottom: 25px; border-radius: 8px; background: #fff; }
+        .result-question { display: flex; align-items: flex-start; gap: 15px; margin-bottom: 10px; padding: 12px; background: #f8fafc; border-radius: 8px; font-weight: 500;}
+        .result-check { display: inline-flex; justify-content: center; align-items: center; width: 22px; height: 22px; border-radius: 4px; font-weight: bold; font-size: 14px; margin-top: 2px; flex-shrink: 0; }
+        .check-yes { background-color: var(--primary); color: white; }
+        .check-no { background-color: #e5e7eb; color: transparent; border: 1px solid #cbd5e1; }
+        
+        .result-sec-text { background: #e0f2fe; padding: 15px; border-radius: 8px; margin-top: 15px; display: block; border-left: 4px solid #0284c7; }
+        .error-box { background: #fee2e2; color: #991b1b; padding: 20px; border-radius: 8px; text-align: center; border: 1px solid #f87171; }
+        
+        .ad-slot { margin-top: 30px; border: 2px dashed #cbd5e1; padding: 20px; text-align: center; border-radius: var(--radius-card); background-color: #f1f5f9; color: var(--text-muted); }
+        .ad-slot img { max-width: 100%; border-radius: 8px; display: block; margin: 0 auto; }
+
+        /* СТИЛИ ДЛЯ ПЕЧАТИ (PDF) */
+        @media print {
+            body { background: white; padding: 0; }
+            .container { max-width: 100%; width: 100%; }
+            .btn-next, .btn-print, .ad-slot, .progress-track, .step-info { display: none !important; }
+            .card { box-shadow: none; border: 1px solid #ccc; padding: 20px; margin-bottom: 20px; page-break-inside: avoid; }
+            .result-section-box { border-left: 4px solid var(--primary); page-break-inside: avoid; margin-bottom: 20px; }
+            .result-question { background: none; border-bottom: 1px solid #eee; border-radius: 0; }
+            h1 { font-size: 1.8rem; }
+            h2 { font-size: 1.5rem; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="main-container">
+        </div>
+
+    <script src="questions.js"><\/script>
+
+    <script>
+        let currentStep = 0;
+        let answers = {}; 
+        const containerDiv = document.getElementById('main-container');
+
+        // Утилита для безопасного рендеринга текста (защита от XSS)
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[tag]));
+        }
+
+        // Проверка наличия данных перед стартом
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof surveyData === 'undefined' || !surveyData || !surveyData.sections) {
+                containerDiv.innerHTML = \`
+                    <div class="error-box">
+                        <h3>Критическая ошибка</h3>
+                        <p>Файл <strong>questions.js</strong> не найден или содержит ошибки.</p>
+                        <p>Убедитесь, что файл данных скачан и находится в одной папке с этим HTML-документом.</p>
+                    </div>
+                \`;
+                return;
+            }
+            renderStartPage();
+        });
+
+        // СТАРТОВАЯ СТРАНИЦА
+        function renderStartPage() {
+            let html = \`
+                <div class="card" style="text-align: center; padding: 50px 20px;">
+                    <h1 class="quiz-title" style="margin-bottom: 15px;">Заголовок опросника</h1>
+                    <div class="section-description" style="margin-bottom: 40px; color: var(--text-muted);">
+                        Здесь находится произвольный текст подзаголовка. Вы можете изменить его прямо в HTML-коде.
+                    </div>
+                    <button class="btn-next" onclick="startQuiz()" style="max-width: 250px; margin: 0 auto; display: block;">Начать тест</button>
+                </div>
+                
+                <div class="ad-slot">
+                    <p>Место для рекламного баннера на стартовой странице (720px)</p>
+                </div>
+            \`;
+            containerDiv.innerHTML = html;
+        }
+
+        function startQuiz() {
+            currentStep = 0;
+            renderStep();
+        }
+
+        function toggleCheck(id) {
+            const cb = document.getElementById(id);
+            const label = document.getElementById('label_' + id);
+            answers[id] = cb.checked;
+            if (cb.checked) {
+                label.classList.add('checked');
+            } else {
+                label.classList.remove('checked');
+            }
+        }
+
+        function renderStep() {
+            if (currentStep >= surveyData.sections.length) {
+                renderResults();
+                return;
+            }
+
+            const sec = surveyData.sections[currentStep];
+            const progressPercent = Math.round((currentStep / surveyData.sections.length) * 100);
+            
+            let html = \`
+                <h1 class="quiz-title" style="text-align: center;">Онлайн-Опросник</h1>
+                <div class="header">
+                    <div class="step-info">Шаг \${currentStep + 1} из \${surveyData.sections.length}</div>
+                    <div class="progress-labels">
+                        <span>Раздел: \${escapeHTML(sec.title)}</span>
+                        <span>\${progressPercent}%</span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-fill" style="width: \${progressPercent}%"></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="section-title">\${escapeHTML(sec.title)}</div>
+            \`;
+
+            // Описание раздела рендерится через innerHTML, т.к. там форматирование (списки, ссылки)
+            if (sec.description && sec.description !== '<br>') {
+                html += \`<div class="section-description">\${sec.description}</div>\`;
+            }
+
+            sec.questions.forEach((q) => {
+                const isChecked = answers[q.id] ? 'checked' : '';
+                const checkedClass = answers[q.id] ? 'checked' : '';
+                
+                // Текст вопроса рендерится через innerHTML, так как конструктор использует WYSIWYG
+                html += \`
+                    <div class="question-block">
+                        <div class="q-text">\${q.text}</div>
+                        \${q.note && q.note !== '<br>' ? \`<div class="q-note">\${q.note}</div>\` : ''}
+                        <label id="label_\${q.id}" class="custom-checkbox-label \${checkedClass}">
+                            <span>Согласен / Да</span>
+                            <input type="checkbox" id="\${q.id}" \${isChecked} onchange="toggleCheck('\${q.id}')">
+                        </label>
+                    </div>
+                \`;
+            });
+
+            const btnText = currentStep === surveyData.sections.length - 1 ? "Завершить опрос →" : "Далее →";
+            html += \`
+                </div>
+                <button class="btn-next" onclick="nextStep()">\${escapeHTML(btnText)}</button>
+            \`;
+
+            containerDiv.innerHTML = html;
+        }
+
+        function nextStep() {
+            const sec = surveyData.sections[currentStep];
+            sec.questions.forEach(q => {
+                const cb = document.getElementById(q.id);
+                if(cb) answers[q.id] = cb.checked;
+            });
+            currentStep++;
+            renderStep();
+        }
+
+        function renderResults() {
+            let html = \`
+                <h1 class="quiz-title" style="text-align: center;">Онлайн-Опросник</h1>
+                <div class="header">
+                    <div class="step-info">Опрос завершен</div>
+                    <div class="progress-track"><div class="progress-fill" style="width: 100%"></div></div>
+                </div>
+                <div class="card" id="results-card">
+                    <h2 style="font-size: 1.8rem; margin-bottom: 25px;">Ваши ответы и результаты</h2>
+            \`;
+
+            surveyData.sections.forEach(sec => {
+                let sectionYesCount = 0;
+                html += \`<div class="result-section-box"><h3 style="margin-bottom: 15px;">\${escapeHTML(sec.title)}</h3>\`;
+                
+                sec.questions.forEach(q => {
+                    const isYes = answers[q.id] === true;
+                    if (isYes) sectionYesCount++;
+                    
+                    // Визуально понятный индикатор вместо disabled checkbox
+                    const checkIcon = isYes ? '<span class="result-check check-yes">✓</span>' : '<span class="result-check check-no"></span>';
+                    
+                    html += \`
+                        <div class="result-question">
+                            \${checkIcon}
+                            <div>\${q.text}</div>
+                        </div>
+                    \`;
+                });
+
+                // Безопасная проверка диапазонов
+                if (!sec.ranges || sec.ranges.length === 0) {
+                    html += \`<div class="result-sec-text" style="background:#fef2f2; border-color:#ef4444; color:#991b1b;">Результаты не настроены</div>\`;
+                } else {
+                    const sRange = sec.ranges.find(r => sectionYesCount >= r.min && sectionYesCount <= r.max);
+                    if (sRange && sRange.text && sRange.text !== '<br>') {
+                        html += \`
+                            <div class="result-sec-text">
+                                <strong>Результат (Да: \${sectionYesCount}):</strong><br>
+                                \${sRange.text}
+                            </div>
+                        \`;
+                    }
+                }
+
+                html += \`</div>\`;
+            });
+            
+            html += \`</div>\`; // Закрытие card ответов
+
+            html += \`
+                <div class="ad-slot">
+                    <p>Место для рекламного баннера 720px</p>
+                </div>
+            \`;
+
+            html += \`<button class="btn-print" onclick="window.print()">Скачать результаты (PDF)</button>\`;
+
+            containerDiv.innerHTML = html;
+        }
+    <\/script>
+</body>
+</html>`;
+
+        const blob = new Blob([htmlTemplate], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'survey.html';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+</script>
+</body>
+</html>

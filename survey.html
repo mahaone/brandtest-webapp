@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест запуска бренда</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <link rel="stylesheet" type="text/css" href="print.css" media="print">
+</head>
+<body>
+    <div class="container" id="main-container">
+    </div>
+
+    <script src="questionsgemini.js"></script>
+
+    <script>
+        let currentStep = 0;
+        let answers = {}; 
+        const containerDiv = document.getElementById('main-container');
+
+        // Утилита для безопасного рендеринга текста (защита от XSS)
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[tag]));
+        }
+
+        // Проверка наличия данных перед стартом
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof surveyData === 'undefined' || !surveyData || !surveyData.sections) {
+                containerDiv.innerHTML = `
+                    <div class="error-box">
+                        <h3>Критическая ошибка</h3>
+                        <p>Файл вопросов не найден или содержит ошибки.</p>
+                        <p>Убедитесь, что файл данных скачан и находится в одной папке с этим HTML-документом.</p>
+                    </div>
+                `;
+                return;
+            }
+            renderStartPage();
+        });
+
+        // СТАРТОВАЯ СТРАНИЦА
+        function renderStartPage() {
+            let html = `
+                <div class="card startcard">
+                    <h1 class="quiz-title">Готовы ли вы к запуску бренда</h1>
+                    <p class="section-description">Проверьте, есть ли у проекта шанс стать устойчивым брендом, а не пробой ваших амбиций</p>
+                    <button class="btn-next" onclick="startQuiz()" style="max-width: 250px;">Начать тест</button>
+                </div>
+                
+                <div class="ad-slot">
+                    <p>Место для рекламного баннера на стартовой странице (720px)</p>
+                </div>
+            `;
+            containerDiv.innerHTML = html;
+        }
+
+        function startQuiz() {
+            currentStep = 0;
+            renderStep();
+        }
+
+        function toggleCheck(id) {
+            const cb = document.getElementById(id);
+            const label = document.getElementById('label_' + id);
+            answers[id] = cb.checked;
+            if (cb.checked) {
+                label.classList.add('checked');
+            } else {
+                label.classList.remove('checked');
+            }
+        }
+
+        function renderStep() {
+            if (currentStep >= surveyData.sections.length) {
+                renderResults();
+                return;
+            }
+
+            const sec = surveyData.sections[currentStep];
+            const progressPercent = Math.round((currentStep / surveyData.sections.length) * 100);
+            
+            let html = `
+                <div class="header">
+                    <div class="progress-labels">
+                        <span>Шаг ${currentStep + 1} из ${surveyData.sections.length}</span>
+                        <span>${progressPercent}%</span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-fill" style="width: ${progressPercent}%"></div>
+                    </div>
+                </div>
+                <div class="card">
+                        <h2 class="section-title">${escapeHTML(sec.title)}</h2>
+            `;
+
+            // Описание раздела рендерится через innerHTML, т.к. там форматирование (списки, ссылки)
+            if (sec.description && sec.description !== '<br>') {
+                html += `<p class="section-description">${sec.description}</p>`;
+            }
+
+            sec.questions.forEach((q) => {
+                const isChecked = answers[q.id] ? 'checked' : '';
+                const checkedClass = answers[q.id] ? 'checked' : '';
+                
+                // Текст вопроса рендерится через innerHTML, так как конструктор использует WYSIWYG
+                html += `
+                    <div class="question-block">
+                        <label id="label_${q.id}" class="custom-checkbox-label ${checkedClass}">
+                            <div class="q-container">
+                                <p class="q-text">${q.text}</p>
+                                ${q.note && q.note !== '<br>' ? `<p class="q-note">${q.note}</p>` : ''}
+                            </div>
+                            <input type="checkbox" id="${q.id}" ${isChecked} onchange="toggleCheck('${q.id}')">
+                        </label>
+                    </div>
+                `;
+            });
+
+            const btnText = currentStep === surveyData.sections.length - 1 ? "Узнать результаты →" : "Далее →";
+            html += `
+                </div>
+                <button class="btn-next" onclick="nextStep()">${escapeHTML(btnText)}</button>
+            `;
+
+            // Обновляем DOM
+            containerDiv.innerHTML = html;
+
+            // Скролл наверх ===
+            setTimeout(() => {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            }, 100); 
+        }
+
+        function nextStep() {
+            const sec = surveyData.sections[currentStep];
+            sec.questions.forEach(q => {
+                const cb = document.getElementById(q.id);
+                if(cb) answers[q.id] = cb.checked;
+            });
+            currentStep++;
+            renderStep();
+        }
+
+        function renderResults() {
+            let html = `
+                <div class="header">
+                    <div class="step-info">Тест завершен</div>
+                    <div class="progress-track"><div class="progress-fill" style="width: 100%"></div></div>
+                </div>
+                <div class="card" id="results-card">
+                    <h2 class="section-title">Ваши ответы и результаты</h2>
+            `;
+
+            surveyData.sections.forEach(sec => {
+                let sectionYesCount = 0;
+                html += `<div class="result-section-box"><h3>${escapeHTML(sec.title)}</h3>`;
+                
+                sec.questions.forEach(q => {
+                    const isYes = answers[q.id] === true;
+                    if (isYes) sectionYesCount++;
+                    
+                    // Визуально понятный индикатор вместо disabled checkbox
+                    const checkIcon = isYes ? '<span class="result-check check-yes">✓</span>' : '<span class="result-check check-no"></span>';
+                    
+                    html += `
+                        <div class="result-question">
+                            ${checkIcon}
+                            <p>${q.text}</p>
+                        </div>
+                    `;
+                });
+
+                // Безопасная проверка диапазонов
+                if (!sec.ranges || sec.ranges.length === 0) {
+                    html += `<div class="result-sec-text">Результаты не настроены</div>`;
+                } else {
+                    const sRange = sec.ranges.find(r => sectionYesCount >= r.min && sectionYesCount <= r.max);
+                    if (sRange && sRange.text && sRange.text !== '<br>') {
+                        html += `
+                            <div class="result-sec-text">
+                                <strong>Результат:</strong><br>
+                                ${sRange.text}
+                            </div>
+                        `;
+                    }
+                }
+
+                html += `</div>`;
+            });
+            
+            html += `</div>`; // Закрытие card ответов
+
+            html += `
+                <div class="ad-slot">
+                    <p>Место для рекламного баннера 720px</p>
+                </div>
+            `;
+
+            html += `<button class="btn-print" onclick="window.print()">Скачать результаты (PDF)</button>`;
+
+            // Обновляем DOM
+            containerDiv.innerHTML = html;
+
+
+            // Скролл наверх ===
+            setTimeout(() => {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            }, 100); 
+        }
+    </script>
+</body>
+</html>
