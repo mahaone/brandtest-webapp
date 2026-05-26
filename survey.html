@@ -45,7 +45,7 @@
         function renderStartPage() {
             let html = `
                 <div class="card startcard">
-                    <h1 class="quiz-title">Готовы ли вы к запуску бренда</h1>
+                    <h1 class="section-title">Готовы ли вы к запуску бренда</h1>
                     <p class="section-description">Проверьте, есть ли у проекта шанс стать устойчивым брендом, а не пробой ваших амбиций</p>
                     <button class="btn-next" onclick="startQuiz()" style="max-width: 250px;">Начать тест</button>
                 </div>
@@ -84,22 +84,18 @@
             
             let html = `
                 <div class="header">
-                    <div class="progress-labels">
+                    <div class="progress-labels flex-wrapper-horizontal">
                         <span>Шаг ${currentStep + 1} из ${surveyData.sections.length}</span>
                         <span>${progressPercent}%</span>
                     </div>
                     <div class="progress-track">
                         <div class="progress-fill" style="width: ${progressPercent}%"></div>
                     </div>
+                    <h2 class="section-title">${escapeHTML(sec.title)}</h2>
+                    ${sec.description && sec.description !== '<br>' ? `<p class="section-description">${sec.description}</p>` : ''}
                 </div>
                 <div class="card">
-                        <h2 class="section-title">${escapeHTML(sec.title)}</h2>
             `;
-
-            // Описание раздела рендерится через innerHTML, т.к. там форматирование (списки, ссылки)
-            if (sec.description && sec.description !== '<br>') {
-                html += `<p class="section-description">${sec.description}</p>`;
-            }
 
             sec.questions.forEach((q) => {
                 const isChecked = answers[q.id] ? 'checked' : '';
@@ -152,9 +148,9 @@
                 <div class="header">
                     <div class="step-info">Тест завершен</div>
                     <div class="progress-track"><div class="progress-fill" style="width: 100%"></div></div>
+                    <h2 class="section-title">Результаты теста</h2>
                 </div>
                 <div class="card" id="results-card">
-                    <h2 class="section-title">Ваши ответы и результаты</h2>
             `;
 
             surveyData.sections.forEach(sec => {
@@ -178,15 +174,15 @@
 
                 // Безопасная проверка диапазонов
                 if (!sec.ranges || sec.ranges.length === 0) {
-                    html += `<div class="result-sec-text">Результаты не настроены</div>`;
+                    html += `<p class="result-sec-text">Результаты не настроены</p>`;
                 } else {
                     const sRange = sec.ranges.find(r => sectionYesCount >= r.min && sectionYesCount <= r.max);
                     if (sRange && sRange.text && sRange.text !== '<br>') {
                         html += `
-                            <div class="result-sec-text">
-                                <strong>Результат:</strong><br>
+                            <p class="result-sec-text">
+                                <strong>Результат по разделу:</strong><br>
                                 ${sRange.text}
-                            </div>
+                            </p>
                         `;
                     }
                 }
