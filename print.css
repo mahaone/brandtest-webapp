@@ -8,6 +8,10 @@ body {
     padding: 4% 4% 4% 7%;
 }
 
+h1, h2, h3, h4, button {
+    color: black;
+}
+
 .container {
     max-width: 100%;
     width: 100%;
@@ -23,24 +27,32 @@ body {
 
 .result-section-box {
     page-break-inside: avoid;
+    box-shadow: none;
+    border-width: 0 0 0 4px;
+    border-color: #ddd;
+    padding: 8px 0 8px 24px;
 }
 
 .card {
     box-shadow: none;
     border: none;
     padding: 0;
-    margin-bottom: 0;
-}
-
-.result-section-box {
-    border-left: 4px solid var(--primary);
-    margin-bottom: 20px;
+    margin: 0;
 }
 
 .result-question {
     background: none;
-    border-bottom: 1px solid #eee;
-    border-radius: 0;
+    border-bottom: 2px solid #ccc;
+}
+
+.check-yes {
+    background: black;
+    color: white;
+}
+
+.check-no {
+    background: none;
+    border: 2px solid #ccc;
 }
 
 * {
