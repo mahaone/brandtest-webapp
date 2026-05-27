@@ -107,18 +107,11 @@ h3 {
     font-size: 1rem;
 }
 
-.section-description, .result-sec-text {
+.section-description {
     font-size: 1.25rem;
     font-weight: 200;
     line-height: 1.5;
     margin-top: 24px;
-
-}
-
-.result-sec-text strong {
-    font-family: "prospect";
-    font-size: 1.4rem;
-    font-weight: 400;
 }
 
 .section-description ul, .result-sec-text ul {
@@ -205,17 +198,17 @@ h3 {
 .result-section-box {
     border: 1px solid var(--primary);
     box-shadow: -8px 8px 0 var(--border);
-    padding: 24px;
+    padding: 32px;
     margin-bottom: 32px;
 }
 
 .result-question {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 16px;
     margin: 0;
-    padding: 12px;
-    border-radius: 0;
+    padding: 8px 0;
+    font-size: 0.9rem;
 }
 
 .result-check {
@@ -244,6 +237,19 @@ h3 {
 .result-sec-text {
     display: block;
     margin-top: 24px;
+    padding: 24px 16px 16px 16px;
+    border-top: 1px solid var(--border);
+    background: linear-gradient(180deg, #212, transparent 50%);
+    font-size: 1rem;
+    font-weight: 200;
+    line-height: 1.5;
+}
+
+.result-sec-text strong {
+    font-family: "prospect";
+    font-size: 1.4rem;
+    font-weight: 400;
+    color: var(--primary);
 }
 
 .error-box {

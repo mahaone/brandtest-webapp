@@ -1,15 +1,17 @@
+:root {
+    --primary: #666;
+    --secondary: black;
+    --bg: none;
+    --border: #CCC;
+}
+
 @page{
     size: A4 portrait;
+    margin: 1.2cm 1.2cm 1.2cm 2cm;
 }
 
 body {
     background: white;
-    color: black;
-    padding: 4% 4% 4% 7%;
-}
-
-h1, h2, h3, h4, button {
-    color: black;
 }
 
 .container {
@@ -17,7 +19,7 @@ h1, h2, h3, h4, button {
     width: 100%;
 }
 
-.btn-next, .btn-print, .ad-slot, .progress-track {
+.btn-next, .btn-print, .ad-slot, .step-info, .progress-track {
     display: none !important;
 }
 
@@ -29,30 +31,30 @@ h1, h2, h3, h4, button {
     page-break-inside: avoid;
     box-shadow: none;
     border-width: 0 0 0 4px;
-    border-color: #ddd;
-    padding: 8px 0 8px 24px;
+    border-color: var(--border);
+    padding: 16px 0 16px 24px;
 }
 
 .card {
     box-shadow: none;
     border: none;
     padding: 0;
-    margin: 0;
+    margin: 24px 0;
 }
 
-.result-question {
+.result-sec-text {
+    padding: 16px 0 0 0;
     background: none;
-    border-bottom: 2px solid #ccc;
 }
 
 .check-yes {
-    background: black;
+    background: var(--secondary);
     color: white;
 }
 
 .check-no {
     background: none;
-    border: 2px solid #ccc;
+    border: 2px solid var(--border);
 }
 
 * {
