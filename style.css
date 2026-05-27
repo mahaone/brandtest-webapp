@@ -239,11 +239,15 @@ h3 {
     margin-top: 24px;
     padding: 24px 16px 16px 16px;
     border-top: 1px solid var(--border);
-    background: linear-gradient(180deg, #212, transparent 50%);
+    background: linear-gradient(180deg, #000, transparent 50%);
     font-size: 1rem;
     font-weight: 200;
     line-height: 1.5;
 }
+
+.range-1 { background: linear-gradient(180deg, #401, transparent 50%); }
+.range-2 { background: linear-gradient(180deg, #320, transparent 50%); }
+.range-3 { background: linear-gradient(180deg, #032, transparent 50%); }
 
 .result-sec-text strong {
     font-family: "prospect";

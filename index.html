@@ -179,8 +179,9 @@
                 } else {
                     const sRange = sec.ranges.find(r => sectionYesCount >= r.min && sectionYesCount <= r.max);
                     if (sRange && sRange.text && sRange.text !== '<br>') {
+                        const rangeClass = sRange.name ? ' ' + sRange.name : '';
                         html += `
-                            <p class="result-sec-text">
+                            <p class="result-sec-text${rangeClass}">
                                 <strong>Результат по разделу:</strong><br>
                                 ${sRange.text}
                             </p>
