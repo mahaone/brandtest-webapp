@@ -38,25 +38,8 @@
                 `;
                 return;
             }
-            renderStartPage();
+            startQuiz();
         });
-
-        // СТАРТОВАЯ СТРАНИЦА
-        function renderStartPage() {
-            let html = `
-                <div class="card startcard">
-                    <h1 class="section-title">Готовы ли вы к&nbsp;запуску бренда</h1>
-                    <p class="section-subtitle">Версия бренд-стратега</p>
-                    <p class="section-description">Пройдите тест и проверьте, есть ли у проекта шанс стать устойчивым брендом, а не пробой ваших амбиций</p>
-                    <button class="btn-next" onclick="startQuiz()" style="max-width: 250px;">Начать тест</button>
-                </div>
-                
-                <div class="ad-slot">
-                    <p>Место для рекламного баннера на стартовой странице (720px)</p>
-                </div>
-            `;
-            containerDiv.innerHTML = html;
-        }
 
         function startQuiz() {
             currentStep = 0;
