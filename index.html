@@ -130,16 +130,15 @@
         function renderResults() {
             let html = `
                 <div class="header">
-                    <div class="step-info">Тест завершен</div>
-                    <div class="progress-track"><div class="progress-fill" style="width: 100%"></div></div>
-                    <h2 class="section-title">Результаты теста «Готовы ли вы к&nbsp;запуску бренда»</h2>
+                    <h3>Результаты теста</h2>
+                    <h2>«Готовы ли вы к&nbsp;запуску бренда»</h2>
                 </div>
                 <div class="card" id="results-card">
             `;
 
             surveyData.sections.forEach(sec => {
                 let sectionYesCount = 0;
-                html += `<div class="result-section-box"><h3>${escapeHTML(sec.title)}</h3>`;
+                html += `<div class="result-section-box"><h3 class="section-title">${escapeHTML(sec.title)}</h3>`;
                 
                 sec.questions.forEach(q => {
                     const isYes = answers[q.id] === true;
